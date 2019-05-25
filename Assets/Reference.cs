@@ -1,54 +1,63 @@
 ﻿//最后是参考预设体方块的简单实现：
 using UnityEngine;
-using UnityEngine.UI;
+
 public class Reference : MonoBehaviour
 {
     //颜色材质区分
-    public Material startMat;
-    public Material endMat;
-    public Material obstacleMat;
-    //显示信息Text
-    private Text text;
+    public Material[] typeMat;
+    public MeshRenderer mesh;
     //当前格子坐标
     public int x;
     public int y;
-    void Awake()
+
+    private void Awake()
     {
-        text = GameObject.Find("Text").GetComponent<Text>();
+        mesh = GetComponent<MeshRenderer>();
     }
-    //判断当前格子的类型
-    void OnTriggerEnter(Collider other)
-    {
-        if (other.tag == "Start")
-        {
-            GetComponent<MeshRenderer>().material = startMat;
-            AStar.instance.grids[x, y].type = GridType.Start;
-            AStar.instance.openList.Add(AStar.instance.grids[x, y]);
-            AStar.instance.startX = x;
-            AStar.instance.startY = y;
-        }
-        else if (other.tag == "End")
-        {
-            GetComponent<MeshRenderer>().material = endMat;
-            AStar.instance.grids[x, y].type = GridType.End;
-            AStar.instance.targetX = x;
-            AStar.instance.targetY = y;
-        }
-        else if (other.tag == "Obstacle")
-        {
-            GetComponent<MeshRenderer>().material = obstacleMat;
-            AStar.instance.grids[x, y].type = GridType.Obstacle;
-        }
-    }
+
     /// <summary>
     /// 鼠标点击显示当前格子基础信息
     /// </summary>
     void OnMouseDown()
     {
-        text.text = "XY(" + x + "," + y + ")" + "\n" +
-        "FGH(" + AStar.instance.grids[x, y].f + "," +
-        AStar.instance.grids[x, y].g + "," +
-        AStar.instance.grids[x, y].h + ")";
-        text.color = GetComponent<MeshRenderer>().material.color;
+        var grid = AStar.instance.grids[x, y];
+        AStar.instance.tips.text = string.Format("XY({0},{1})\nFGH({2},{3},{4})",x,y,grid.f,grid.g,grid.h);
+        var curType = AStar.instance.curType;
+        //text.color = GetComponent<MeshRenderer>().material.color;
+        if (grid.type == curType)
+        {
+            mesh.material = typeMat[(int)GridType.Normal];
+            grid.type = GridType.Normal;
+        }
+        else
+        {
+            if(curType == GridType.Start)
+            {
+                if (AStar.instance.startGrid != null)
+                {
+                    AStar.instance.startGrid.type = GridType.Normal;
+                    AStar.instance.startRect.mesh.material = typeMat[(int)GridType.Normal];
+                }
+                AStar.instance.startGrid = grid;
+                AStar.instance.startRect = this;
+                AStar.instance.startX = x;
+                AStar.instance.startY = y;
+            }
+            else if (curType == GridType.End)
+            {
+                if (AStar.instance.endGrid != null)
+                {
+                    AStar.instance.endGrid.type = GridType.Normal;
+                    AStar.instance.endRect.mesh.material = typeMat[(int)GridType.Normal];
+                }
+                AStar.instance.endGrid = grid;
+                AStar.instance.endRect = this;
+                AStar.instance.targetX = x;
+                AStar.instance.targetY = y;
+            }
+
+            mesh.material = typeMat[(int)curType];
+            grid.type = curType;
+        }
     }
 }

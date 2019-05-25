@@ -60,4 +60,11 @@ public class Grid : IComparable
         }
         return 0;
     }
+
+    public void Clear()
+    {
+        f = g = h = 0;
+        type = GridType.Normal;
+        parent = null;
+    }
 }

@@ -2,14 +2,19 @@
 using UnityEngine;
 using System.Collections;
 using System.Collections.Generic;
+using UnityEngine.UI;
+
 public class AStar : MonoBehaviour
 {
     /// <summary>
     /// 单例脚本
     /// </summary>
     public static AStar instance;
+    public const int MinD = 10;
     //参考物体预设体
     public GameObject reference;
+    public Text tips;
+    public Vector2 size;
     //格子数组
     public Grid[,] grids;
     //格子数组对应的参考物（方块）对象
@@ -18,12 +23,26 @@ public class AStar : MonoBehaviour
     public ArrayList openList;
     //关闭列表
     public ArrayList closeList;
-    //目标点坐标
-    public int targetX;
-    public int targetY;
     //起始点坐标
+    [HideInInspector]
     public int startX;
+    [HideInInspector]
     public int startY;
+    //目标点坐标
+    [HideInInspector]
+    public int targetX;
+    [HideInInspector]
+    public int targetY;
+
+    [HideInInspector]
+    public GridType curType = GridType.Normal;
+    public Grid startGrid;
+    public Grid endGrid;
+    [HideInInspector]
+    public Reference startRect;
+    [HideInInspector]
+    public Reference endRect;
+
     //格子行列数
     private int row;
     private int colomn;
@@ -31,9 +50,6 @@ public class AStar : MonoBehaviour
     private Stack<string> parentList;
     //基础物体
     private Transform plane;
-    private Transform start;
-    private Transform end;
-    private Transform obstacle;
     //流颜色参数
     private float alpha = 0;
     private float incrementPer = 0;
@@ -41,9 +57,6 @@ public class AStar : MonoBehaviour
     {
         instance = this;
         plane = GameObject.Find("Plane").transform;
-        start = GameObject.Find("Start").transform;
-        end = GameObject.Find("End").transform;
-        obstacle = GameObject.Find("Obstacle").transform;
         parentList = new Stack<string>();
         openList = new ArrayList();
         closeList = new ArrayList();
@@ -54,14 +67,14 @@ public class AStar : MonoBehaviour
     void Init()
     {
         //计算行列数
-        int x = (int)(plane.localScale.x * 20);
-        int y = (int)(plane.localScale.z * 20);
+        int x = (int)size.x;
+        int y = (int)size.y;
         row = x;
         colomn = y;
         grids = new Grid[x, y];
         objs = new GameObject[x, y];
         //起始坐标
-        Vector3 startPos = new Vector3(plane.localScale.x, 0, plane.localScale.z);
+        Vector3 startPos = new Vector3(-4.75f, 0, 0.5f);
         //生成参考物体（Cube）
         for (int i = 0; i < x; i++)
         {
@@ -92,6 +105,7 @@ public class AStar : MonoBehaviour
         {
             //获取此时最小F点
             currentGrid = openList[0] as Grid;
+            Debug.Log(string.Format("top({0},{1})", currentGrid.x, currentGrid.y));
             //如果当前点就是目标
             if (currentGrid.type == GridType.End)
             {
@@ -99,7 +113,7 @@ public class AStar : MonoBehaviour
                 //生成结果
                 GenerateResult(currentGrid);
             }
-            //上下左右，左上左下，右上右下，遍历
+            //上下左右，左上左下，右上右下，遍历八个方向
             for (int i = -1; i <= 1; i++)
             {
                 for (int j = -1; j <= 1; j++)
@@ -114,8 +128,8 @@ public class AStar : MonoBehaviour
                             && grids[x, y].type != GridType.Obstacle
                             && !closeList.Contains(grids[x, y]))
                         {
-                            //计算G值
-                            int g = currentGrid.g + (int)(Mathf.Sqrt((Mathf.Abs(i) + Mathf.Abs(j))) * 10);
+                            //计算G值=相对坐标绝对值的和开平方
+                            int g = currentGrid.g + (int)(Mathf.Sqrt(Mathf.Abs(i) + Mathf.Abs(j)) * MinD);
                             //与原G值对照
                             if (grids[x, y].g == 0 || grids[x, y].g > g)
                             {
@@ -124,7 +138,7 @@ public class AStar : MonoBehaviour
                                 //更新父格子
                                 grids[x, y].parent = currentGrid;
                             }
-                            //计算H值
+                            //计算H值, 曼哈顿方式计算H值
                             grids[x, y].h = Manhattan(x, y);
                             //计算F值
                             grids[x, y].f = grids[x, y].g + grids[x, y].h;
@@ -142,6 +156,7 @@ public class AStar : MonoBehaviour
             }
             //完成遍历添加该点到关闭列表
             closeList.Add(currentGrid);
+            Debug.Log(string.Format("<color=grey>close({0},{1})</color>", currentGrid.x, currentGrid.y));
             //从开启列表中移除
             openList.Remove(currentGrid);
             //如果开启列表空，未能找到路径
@@ -181,8 +196,8 @@ public class AStar : MonoBehaviour
         {
             //出栈
             string str = parentList.Pop();
-            //等0.3秒
-            yield return new WaitForSeconds(0.3f);
+            //等0.1秒
+            yield return new WaitForSeconds(0.1f);
             //拆分获取坐标
             string[] xy = str.Split(new char[] { '|' });
             int x = int.Parse(xy[0]);
@@ -200,12 +215,55 @@ public class AStar : MonoBehaviour
     /// <param name="y">The y coordinate.</param>
     int Manhattan(int x, int y)
     {
-        return (int)(Mathf.Abs(targetX - x) + Mathf.Abs(targetY - y)) * 10;
+        //H(n)=D*(abs(current.x–target.x)+abs(current.y–target.y))
+        return (int)(Mathf.Abs(targetX - x) + Mathf.Abs(targetY - y)) * MinD;
     }
     void Start()
     {
         Init();
+    }
+    public void ClickStart()
+    {
         StartCoroutine(Count());
         StartCoroutine(ShowResult());
+    }
+    public void ClickStop()
+    {
+        StopAllCoroutines();
+    }
+    public void ClickClean()
+    {
+        startX = startY = targetX = targetY = 0;
+        alpha = 0;
+        openList.Clear();
+        closeList.Clear();
+        parentList.Clear();
+
+        startGrid = null;
+        endGrid = null;
+        startRect = null;
+        endRect = null;
+        curType = GridType.Normal;
+
+        for(int x = 0; x < row; x++)
+        {
+            for(int y = 0; y < colomn; y++)
+            {
+                grids[x, y].Clear();
+                objs[x, y].transform.GetComponent<MeshRenderer>().material.color = Color.white;
+            }
+        }
+    }
+    public void ClickQiDian()
+    {
+        curType = GridType.Start;
+    }
+    public void ClickZhongDian()
+    {
+        curType = GridType.End;
+    }
+    public void ClickZhangAi()
+    {
+        curType = GridType.Obstacle;
     }
 }

@@ -4,7 +4,6 @@ using UnityEngine;
 public class Reference : MonoBehaviour
 {
     //颜色材质区分
-    public Material[] typeMat;
     public MeshRenderer mesh;
     //当前格子坐标
     public int x;
@@ -22,11 +21,14 @@ public class Reference : MonoBehaviour
     {
         var grid = AStar.instance.grids[x, y];
         AStar.instance.tips.text = string.Format("XY({0},{1})\nFGH({2},{3},{4})",x,y,grid.f,grid.g,grid.h);
+
         var curType = AStar.instance.curType;
-        //text.color = GetComponent<MeshRenderer>().material.color;
         if (grid.type == curType)
         {
-            mesh.material = typeMat[(int)GridType.Normal];
+            if (curType == GridType.Normal)
+                mesh.material.color = AStar.instance.curColor;
+            else
+                mesh.material.color = AStar.instance.typeColor[0];
             grid.type = GridType.Normal;
         }
         else
@@ -36,7 +38,7 @@ public class Reference : MonoBehaviour
                 if (AStar.instance.startGrid != null)
                 {
                     AStar.instance.startGrid.type = GridType.Normal;
-                    AStar.instance.startRect.mesh.material = typeMat[(int)GridType.Normal];
+                    AStar.instance.startRect.mesh.material.color = AStar.instance.typeColor[0];
                 }
                 AStar.instance.startGrid = grid;
                 AStar.instance.startRect = this;
@@ -48,7 +50,7 @@ public class Reference : MonoBehaviour
                 if (AStar.instance.endGrid != null)
                 {
                     AStar.instance.endGrid.type = GridType.Normal;
-                    AStar.instance.endRect.mesh.material = typeMat[(int)GridType.Normal];
+                    AStar.instance.endRect.mesh.material.color = AStar.instance.typeColor[0];
                 }
                 AStar.instance.endGrid = grid;
                 AStar.instance.endRect = this;
@@ -56,8 +58,9 @@ public class Reference : MonoBehaviour
                 AStar.instance.targetY = y;
             }
 
-            mesh.material = typeMat[(int)curType];
+            mesh.material.color = AStar.instance.curColor;
             grid.type = curType;
         }
+        grid.weight = AStar.instance.curWeight;
     }
 }

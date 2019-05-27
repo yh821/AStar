@@ -9,14 +9,22 @@ using System;
 /// </summary>
 public enum GridType
 {
-    //正常类型
+    //地形类型
     Normal,
-    //障碍物类型
-    Obstacle,
     //起点类型
     Start,
     //终点类型
     End
+}
+public enum WeightType
+{
+    Grass,//草地
+    Brook,//小溪
+    Massif,//山丘
+    River,//江
+    Mountain,//高山
+    Sea,//海
+    Unable,
 }
 /// <summary>
 /// 格子类（实现IComparable方便排序）
@@ -30,6 +38,8 @@ public class Grid : IComparable
     public int f;
     public int g;
     public int h;
+    //weight权值
+    public WeightType weight = WeightType.Grass;
     //格子类型
     public GridType type;
     //格子的归属（父格子）

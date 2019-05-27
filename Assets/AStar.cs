@@ -34,14 +34,22 @@ public class AStar : MonoBehaviour
     [HideInInspector]
     public int targetY;
 
+    public Color[] typeColor;
+    public GameObject obstaclePrefab;
+
+
     [HideInInspector]
     public GridType curType = GridType.Normal;
+    [HideInInspector]
+    public WeightType curWeight = WeightType.Grass;
     public Grid startGrid;
     public Grid endGrid;
     [HideInInspector]
     public Reference startRect;
     [HideInInspector]
     public Reference endRect;
+    [HideInInspector]
+    public Color curColor;
 
     //格子行列数
     private int row;
@@ -50,13 +58,15 @@ public class AStar : MonoBehaviour
     private Stack<string> parentList;
     //基础物体
     private Transform plane;
+    private Transform obstacles;
     //流颜色参数
     private float alpha = 0;
     private float incrementPer = 0;
     void Awake()
     {
         instance = this;
-        plane = GameObject.Find("Plane").transform;
+        plane = transform.Find("Plane");
+        obstacles = transform.Find("TopLeft/Obstacles");
         parentList = new Stack<string>();
         openList = new ArrayList();
         closeList = new ArrayList();
@@ -73,6 +83,17 @@ public class AStar : MonoBehaviour
         colomn = y;
         grids = new Grid[x, y];
         objs = new GameObject[x, y];
+
+        for(int i = 0; i < typeColor.Length; i++)
+        {
+            GameObject item = Instantiate(obstaclePrefab, obstacles, false);
+            item.name = ((WeightType)i).ToString();
+            Button bt = item.GetComponent<Button>();
+            bt.image.color = typeColor[i];
+            bt.onClick.AddListener(ClickColor);
+        }
+        obstacles.gameObject.SetActive(true);
+
         //起始坐标
         Vector3 startPos = new Vector3(-4.75f, 0, 0.5f);
         //生成参考物体（Cube）
@@ -88,6 +109,7 @@ public class AStar : MonoBehaviour
                 objs[i, j] = item;
             }
         }
+        curColor = typeColor[0];
     }
     /// <summary>
     /// A*计算
@@ -105,7 +127,7 @@ public class AStar : MonoBehaviour
         {
             //获取此时最小F点
             currentGrid = openList[0] as Grid;
-            Debug.Log(string.Format("top({0},{1})", currentGrid.x, currentGrid.y));
+            //Debug.Log(string.Format("top({0},{1}),{2}={3}+{4}", currentGrid.x, currentGrid.y,currentGrid.f, currentGrid.g, currentGrid.h));
             //如果当前点就是目标
             if (currentGrid.type == GridType.End)
             {
@@ -125,28 +147,32 @@ public class AStar : MonoBehaviour
                         int y = currentGrid.y + j;
                         //如果未超出所有格子范围，不是障碍物，不是重复点
                         if (x >= 0 && y >= 0 && x < row && y < colomn
-                            && grids[x, y].type != GridType.Obstacle
+                            && grids[x, y].weight != WeightType.Unable
                             && !closeList.Contains(grids[x, y]))
                         {
+                            var grid = grids[x, y];
                             //计算G值=相对坐标绝对值的和开平方
-                            int g = currentGrid.g + (int)(Mathf.Sqrt(Mathf.Abs(i) + Mathf.Abs(j)) * MinD);
+                            int g = currentGrid.g + (int)(Mathf.Sqrt(Mathf.Abs(i) + Mathf.Abs(j)) * MinD) + (int)grid.weight*5;
+                            Debug.Log(grid.weight.ToString());
                             //与原G值对照
-                            if (grids[x, y].g == 0 || grids[x, y].g > g)
+                            if (grid.g == 0 || grid.g > g)
                             {
                                 //更新G值
-                                grids[x, y].g = g;
+                                grid.g = g;
                                 //更新父格子
-                                grids[x, y].parent = currentGrid;
+                                grid.parent = currentGrid;
                             }
                             //计算H值, 曼哈顿方式计算H值
-                            grids[x, y].h = Manhattan(x, y);
+                            grid.h = Manhattan(x, y);
                             //计算F值
-                            grids[x, y].f = grids[x, y].g + grids[x, y].h;
+                            grid.f = grid.g + grid.h;
                             //如果未添加到开启列表
-                            if (!openList.Contains(grids[x, y]))
+                            if (!openList.Contains(grid))
                             {
                                 //添加
-                                openList.Add(grids[x, y]);
+                                openList.Add(grid);
+                                //if (grid.type == GridType.Normal)
+                                //    objs[x, y].GetComponent<Reference>().mesh.material.color = Color.cyan;
                             }
                             //重新排序
                             openList.Sort();
@@ -156,7 +182,8 @@ public class AStar : MonoBehaviour
             }
             //完成遍历添加该点到关闭列表
             closeList.Add(currentGrid);
-            Debug.Log(string.Format("<color=grey>close({0},{1})</color>", currentGrid.x, currentGrid.y));
+            //if (currentGrid.type == GridType.Normal)
+            //    objs[currentGrid.x, currentGrid.y].GetComponent<Reference>().mesh.material.color = Color.grey;
             //从开启列表中移除
             openList.Remove(currentGrid);
             //如果开启列表空，未能找到路径
@@ -205,7 +232,7 @@ public class AStar : MonoBehaviour
             //当前颜色值
             alpha += incrementPer;
             //以颜色方式绘制路径
-            objs[x, y].transform.GetComponent<MeshRenderer>().material.color = new Color(1 - alpha, alpha, 0, 1);
+            objs[x, y].transform.GetComponent<MeshRenderer>().material.color = new Color(1,1 - alpha, 0, 1);
         }
     }
     /// <summary>
@@ -250,20 +277,30 @@ public class AStar : MonoBehaviour
             for(int y = 0; y < colomn; y++)
             {
                 grids[x, y].Clear();
-                objs[x, y].transform.GetComponent<MeshRenderer>().material.color = Color.white;
+                objs[x, y].transform.GetComponent<MeshRenderer>().material.color = typeColor[0];
             }
         }
     }
     public void ClickQiDian()
     {
         curType = GridType.Start;
+        var go = UnityEngine.EventSystems.EventSystem.current.currentSelectedGameObject;
+        curColor = go.GetComponent<Image>().color;
+        Debug.Log(curType.ToString());
     }
     public void ClickZhongDian()
     {
         curType = GridType.End;
+        var go = UnityEngine.EventSystems.EventSystem.current.currentSelectedGameObject;
+        curColor = go.GetComponent<Image>().color;
+        Debug.Log(curType.ToString());
     }
-    public void ClickZhangAi()
+    public void ClickColor()
     {
-        curType = GridType.Obstacle;
+        curType = GridType.Normal;
+        var go = UnityEngine.EventSystems.EventSystem.current.currentSelectedGameObject;
+        curWeight = (WeightType)System.Enum.Parse(typeof(WeightType), go.name);
+        curColor = go.GetComponent<Image>().color;
+        Debug.Log((int)curWeight*MinD);
     }
 }

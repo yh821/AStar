@@ -10,7 +10,7 @@ using System;
 public enum GridType
 {
     //地形类型
-    Normal,
+    Map,
     //起点类型
     Start,
     //终点类型
@@ -18,12 +18,13 @@ public enum GridType
 }
 public enum WeightType
 {
-    Grass,//草地
-    Brook,//小溪
-    Massif,//山丘
-    River,//江
-    Mountain,//高山
-    Sea,//海
+    Level0,//草地
+    Level1,//小溪
+    Level2,//山丘
+    Level3,//江
+    Level4,//高山
+    Level5,//海
+    Level6,
     Unable,
 }
 /// <summary>
@@ -39,7 +40,7 @@ public class Grid : IComparable
     public int g;
     public int h;
     //weight权值
-    public WeightType weight = WeightType.Grass;
+    public WeightType weight = WeightType.Level0;
     //格子类型
     public GridType type;
     //格子的归属（父格子）
@@ -74,7 +75,8 @@ public class Grid : IComparable
     public void Clear()
     {
         f = g = h = 0;
-        type = GridType.Normal;
+        type = GridType.Map;
         parent = null;
+        weight = WeightType.Level0;
     }
 }

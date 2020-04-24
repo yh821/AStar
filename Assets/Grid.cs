@@ -18,7 +18,7 @@ public enum GridType
 }
 public enum WeightType
 {
-    Level0,//草地
+    Level0=0,//草地
     Level1,//小溪
     Level2,//山丘
     Level3,//江
@@ -40,7 +40,7 @@ public class Grid : IComparable
     public int g;
     public int h;
     //weight权值
-    public WeightType weight = WeightType.Level0;
+    public WeightType weight;
     //格子类型
     public GridType type;
     //格子的归属（父格子）

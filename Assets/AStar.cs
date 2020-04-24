@@ -113,6 +113,8 @@ public partial class AStar : MonoBehaviour
             }
         }
         curColor = typeColor[0];
+
+		ClickClean();
     }
     /// <summary>
     /// A*计算
@@ -159,6 +161,7 @@ public partial class AStar : MonoBehaviour
                             //与原G值对照
                             if (grid.g == 0 || grid.g > g)
                             {
+								//Debug.LogFormat ("更新G值:{0}=>>{1}", grid.g, g);
                                 //更新G值
                                 grid.g = g;
                                 //更新父格子
@@ -168,6 +171,7 @@ public partial class AStar : MonoBehaviour
                             grid.h = Manhattan(x, y);
                             //计算F值
                             grid.f = grid.g + grid.h;
+							//Debug.LogFormat ("f({0})=g({1})+h({2})", grid.f, grid.g, grid.h);
                             //如果未添加到开启列表
                             if (!openList.Contains(grid))
                             {
@@ -206,6 +210,7 @@ public partial class AStar : MonoBehaviour
         {
             //添加到父对象栈（即结果栈）
             parentList.Push(currentGrid.x + "|" + currentGrid.y);
+			Debug.LogFormat ("g:{0},h:{1}", currentGrid.g, currentGrid.h);
             //递归获取
             GenerateResult(currentGrid.parent);
         }
@@ -285,6 +290,7 @@ public partial class AStar : MonoBehaviour
                 objs[x, y].image.color = typeColor[MapData[x, y]];
             }
         }
+		Debug.Log ("Clean");
     }
     public void ClickQiDian()
     {

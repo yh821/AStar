@@ -4,3 +4,4 @@ Library
 AStar.sln
 AStar.csproj
 Temp
+*.csproj

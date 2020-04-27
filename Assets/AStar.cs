@@ -77,6 +77,9 @@ public partial class AStar : MonoBehaviour
     /// </summary>
     void Init()
     {
+		//导入地图
+		ImportMap ();
+
         //计算行列数
         int x = MapData.GetLength(0);
         int y = MapData.GetLength(1);
@@ -114,6 +117,7 @@ public partial class AStar : MonoBehaviour
         }
         curColor = typeColor[0];
 
+		//清理地图
 		ClickClean();
     }
     /// <summary>

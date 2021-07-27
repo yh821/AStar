@@ -1,7 +1,7 @@
 Library
-.vs
-.DS_Store
-AStar.sln
-AStar.csproj
 Temp
+Logs
+.DS_Store
+.vs
+*.sln
 *.csproj

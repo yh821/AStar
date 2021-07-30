@@ -80,7 +80,9 @@ public partial class AStar
                 sw.WriteLine(line.ToString());
             }
         }
-		UnityEditor.AssetDatabase.Refresh ();
+#if UNITY_EDITOR
+        UnityEditor.AssetDatabase.Refresh ();
+#endif
         Debug.LogFormat("导出成功,{0}",fullpath);
     }
 

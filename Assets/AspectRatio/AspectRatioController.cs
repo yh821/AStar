@@ -28,10 +28,8 @@ public class AspectRatioController : MonoBehaviour
     [Serializable]
     public class ResolutionChangedEvent : UnityEvent<int, int, bool> { }
 
-    public Text txtRatio;
-    public Text txtResolution;
-    public Slider widthSlider;
-    public Slider heightSlider;
+    //public Slider widthSlider;
+    private float lastRatioWidth = 16;
 
     // 长宽比的宽度和高度
     private float aspectRatioWidth = 16;
@@ -134,11 +132,10 @@ public class AspectRatioController : MonoBehaviour
 
     void Start()
     {
-        widthSlider.onValueChanged.AddListener((value) => { SetAspectRatio(Mathf.RoundToInt(value), aspectRatioHeight); });
-        heightSlider.onValueChanged.AddListener((value) => { SetAspectRatio(aspectRatioWidth, Mathf.RoundToInt(value)); });
+        //widthSlider.onValueChanged.AddListener((value) => { SetAspectRatio(Mathf.RoundToInt(value), aspectRatioHeight); });
 
         //不要在Unity编辑器中注册WindowProc回调函数，它会指向Unity编辑器窗口，而不是Game视图
-#if UNITY_EDITOR
+#if !UNITY_EDITOR
         //注册回调，然后应用程序想要退出
         Application.wantsToQuit += ApplicationWantsToQuit;
 
@@ -287,10 +284,23 @@ public class AspectRatioController : MonoBehaviour
         return CallWindowProc(oldWndProcPtr, hWnd, msg, wParam, lParam);
     }
 
-    void Update()
+    void OnGUI()
     {
-        txtRatio.text = $"{aspectRatioWidth}:{aspectRatioHeight}";
-        txtResolution.text = $"{Screen.width}x{Screen.height}";
+        GUI.Window(0,
+            new Rect((Screen.width - minWidthPixel) / 2f, (Screen.height - minHeightPixel) / 2f, minWidthPixel,
+                minHeightPixel), OnWindowsFun, "");
+    }
+
+    void OnWindowsFun(int windowId)
+    {
+        GUILayout.Label($"屏幕比例 {aspectRatioWidth}:{aspectRatioHeight}");
+        GUILayout.Label($"屏幕分辨率 {Screen.width}x{Screen.height}");
+        aspectRatioWidth = Mathf.RoundToInt(GUILayout.HorizontalSlider(aspectRatioWidth, 12, 21));
+        if (lastRatioWidth != aspectRatioWidth)
+        {
+            lastRatioWidth = aspectRatioWidth;
+            SetAspectRatio(aspectRatioWidth, aspectRatioHeight);
+        }
     }
 
     /// <summary>

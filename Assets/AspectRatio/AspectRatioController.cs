@@ -1,10 +1,11 @@
 using UnityEngine;
+#if UNITY_STANDALONE_WIN
 using System;
 using System.Collections;
 using System.Runtime.InteropServices;
 using System.Text;
 using UnityEngine.Events;
-using UnityEngine.UI;
+#endif
 
 /// <summary>
 ///强制设置Unity游戏窗口的长宽比。你可以调整窗口的大小，他会强制保持一定比例
@@ -20,39 +21,29 @@ using UnityEngine.UI;
 public class AspectRatioController : MonoBehaviour
 {
 #if UNITY_STANDALONE_WIN
-    /// <summary>
-    /// 每当窗口分辨率改变或用户切换全屏时，都会触发此事件
-    ///  参数是新的宽度、高度和全屏状态(true表示全屏)
-    /// </summary>
-    public ResolutionChangedEvent resolutionChangedEvent;
-    [Serializable]
-    public class ResolutionChangedEvent : UnityEvent<int, int, bool> { }
-
-    //public Slider widthSlider;
-    private float lastRatioWidth = 16;
+    private float mLastRatioWidth = 16;
+    private float mAspectRatioWidth = 16;
 
     // 长宽比的宽度和高度
-    private float aspectRatioWidth = 16;
-    private float aspectRatioHeight = 9;
+    public const int AspectRatioHeight = 9;
 
     // 最小值和最大值的窗口宽度/高度像素
-    private int minWidthPixel = 800;
-    private int minHeightPixel = 600;
-    private int maxWidthPixel = 1920;
-    private int maxHeightPixel = 1080;
+    private int mMinWidthPixel = 800;
+    private int mMinHeightPixel = 600;
+    private int mMaxWidthPixel = 1920;
+    private int mMaxHeightPixel = 1080;
 
     // 当前锁定长宽比。
-    private float aspect;
+    private float mAspect;
 
     // 是否初始化了AspectRatioController
     // 一旦注册了WindowProc回调函数，就将其设置为true
-    private bool started;
-
+    private bool mStarted;
     //一旦用户请求终止applaction，则将其设置为true
-    private bool quitStarted;
+    private bool mQuitStarted;
 
     // WinAPI相关定义
-    #region WINAPI
+#region WINAPI
 
     // 当窗口调整时,WM_SIZING消息通过WindowProc回调发送到窗口
     private const int WM_SIZING = 0x214;
@@ -128,7 +119,7 @@ public class AspectRatioController : MonoBehaviour
         public int Bottom;
     }
 
-    #endregion
+#endregion
 
     void Start()
     {
@@ -154,10 +145,8 @@ public class AspectRatioController : MonoBehaviour
         }, IntPtr.Zero);
 
         // 将长宽比应用于当前分辨率
-        SetAspectRatio(aspectRatioWidth, aspectRatioHeight, true);
-
-        // 保存当前的全屏状态
-        //wasFullscreenLastFrame = Screen.fullScreen;
+        var aspectRatioWidth = PlayerPrefs.GetInt("AspectRatioController.AspectRatioWidth", 16);
+        SetAspectRatio(aspectRatioWidth);
 
         // Register (replace) WindowProc callback。每当一个窗口事件被触发时，这个函数都会被调用
         //例如调整大小或移动窗口
@@ -167,7 +156,7 @@ public class AspectRatioController : MonoBehaviour
         oldWndProcPtr = SetWindowLong(unityHWnd, GWLP_WNDPROC, newWndProcPtr);
 
         // 初始化完成
-        started = true;
+        mStarted = true;
 #endif
     }
 
@@ -177,21 +166,17 @@ public class AspectRatioController : MonoBehaviour
     /// <param name="newAspectWidth">宽高比的新宽度</param>
     /// <param name="newAspectHeight">纵横比的新高度</param>
     /// <param name="apply">true，当前窗口分辨率将立即调整以匹配新的纵横比 false，则只在下次手动调整窗口大小时执行此操作</param>
-    public void SetAspectRatio(float newAspectWidth, float newAspectHeight, bool apply = true)
+    public void SetAspectRatio(float aspectWidth)
     {
         //计算新的纵横比
-        aspectRatioWidth = newAspectWidth;
-        aspectRatioHeight = newAspectHeight;
-        aspect = aspectRatioWidth / aspectRatioHeight;
+        mAspect = aspectWidth / AspectRatioHeight;
+        mMinWidthPixel = Mathf.RoundToInt(mMinHeightPixel * mAspect);
 
         // 调整分辨率以匹配长宽比(触发WindowProc回调)
-        if (apply)
-        {
-            if (Screen.width < maxWidthPixel)
-                Screen.SetResolution(Mathf.RoundToInt(Screen.height * aspect), Screen.height, Screen.fullScreen);
-            else
-                Screen.SetResolution(Screen.width, Mathf.RoundToInt(Screen.width / aspect), Screen.fullScreen);
-        }
+        if (Screen.width < mMaxWidthPixel)
+            Screen.SetResolution(Mathf.RoundToInt(Screen.height * mAspect), Screen.height, Screen.fullScreen);
+        else
+            Screen.SetResolution(Screen.width, Mathf.RoundToInt(Screen.width / mAspect), Screen.fullScreen);
     }
 
     /// <summary>
@@ -225,56 +210,49 @@ public class AspectRatioController : MonoBehaviour
             rc.Bottom -= borderHeight;
 
             // 限制窗口大小
-            int newWidth = Mathf.Clamp(rc.Right - rc.Left, minWidthPixel, maxWidthPixel);
-            int newHeight = Mathf.Clamp(rc.Bottom - rc.Top, minHeightPixel, maxHeightPixel);
+            int newWidth = Mathf.Clamp(rc.Right - rc.Left, mMinWidthPixel, mMaxWidthPixel);
+            int newHeight = Mathf.Clamp(rc.Bottom - rc.Top, mMinHeightPixel, mMaxHeightPixel);
 
             // 根据纵横比和方向调整大小
             switch (wParam.ToInt32())
             {
                 case WMSZ_LEFT:
                     rc.Left = rc.Right - newWidth;
-                    rc.Bottom = rc.Top + Mathf.RoundToInt(newWidth / aspect);
+                    rc.Bottom = rc.Top + Mathf.RoundToInt(newWidth / mAspect);
                     break;
                 case WMSZ_RIGHT:
                     rc.Right = rc.Left + newWidth;
-                    rc.Bottom = rc.Top + Mathf.RoundToInt(newWidth / aspect);
+                    rc.Bottom = rc.Top + Mathf.RoundToInt(newWidth / mAspect);
                     break;
                 case WMSZ_TOP:
                     rc.Top = rc.Bottom - newHeight;
-                    rc.Right = rc.Left + Mathf.RoundToInt(newHeight * aspect);
+                    rc.Right = rc.Left + Mathf.RoundToInt(newHeight * mAspect);
                     break;
                 case WMSZ_BOTTOM:
                     rc.Bottom = rc.Top + newHeight;
-                    rc.Right = rc.Left + Mathf.RoundToInt(newHeight * aspect);
+                    rc.Right = rc.Left + Mathf.RoundToInt(newHeight * mAspect);
                     break;
                 case WMSZ_RIGHT + WMSZ_BOTTOM:
                     rc.Right = rc.Left + newWidth;
-                    rc.Bottom = rc.Top + Mathf.RoundToInt(newWidth / aspect);
+                    rc.Bottom = rc.Top + Mathf.RoundToInt(newWidth / mAspect);
                     break;
                 case WMSZ_RIGHT + WMSZ_TOP:
                     rc.Right = rc.Left + newWidth;
-                    rc.Top = rc.Bottom - Mathf.RoundToInt(newWidth / aspect);
+                    rc.Top = rc.Bottom - Mathf.RoundToInt(newWidth / mAspect);
                     break;
                 case WMSZ_LEFT + WMSZ_BOTTOM:
                     rc.Left = rc.Right - newWidth;
-                    rc.Bottom = rc.Top + Mathf.RoundToInt(newWidth / aspect);
+                    rc.Bottom = rc.Top + Mathf.RoundToInt(newWidth / mAspect);
                     break;
                 case WMSZ_LEFT + WMSZ_TOP:
                     rc.Left = rc.Right - newWidth;
-                    rc.Top = rc.Bottom - Mathf.RoundToInt(newWidth / aspect);
+                    rc.Top = rc.Bottom - Mathf.RoundToInt(newWidth / mAspect);
                     break;
             }
-
-            // 保存实际分辨率,不包括边界
-            var setWidth = rc.Right - rc.Left;
-            var setHeight = rc.Bottom - rc.Top;
 
             // 添加边界
             rc.Right += borderWidth;
             rc.Bottom += borderHeight;
-
-            // 触发分辨率更改事件
-            resolutionChangedEvent.Invoke(setWidth, setHeight, Screen.fullScreen);
 
             // 回写更改的窗口参数
             Marshal.StructureToPtr(rc, lParam, true);
@@ -287,19 +265,19 @@ public class AspectRatioController : MonoBehaviour
     void OnGUI()
     {
         GUI.Window(0,
-            new Rect((Screen.width - minWidthPixel) / 2f, (Screen.height - minHeightPixel) / 2f, minWidthPixel,
-                minHeightPixel), OnWindowsFun, "");
+            new Rect((Screen.width - mMinWidthPixel) / 2f, (Screen.height - mMinHeightPixel) / 2f, mMinWidthPixel,
+                mMinHeightPixel), OnWindowsFun, "");
     }
 
     void OnWindowsFun(int windowId)
     {
-        GUILayout.Label($"屏幕比例 {aspectRatioWidth}:{aspectRatioHeight}");
+        GUILayout.Label($"屏幕比例 {mAspectRatioWidth}:{AspectRatioHeight}");
         GUILayout.Label($"屏幕分辨率 {Screen.width}x{Screen.height}");
-        aspectRatioWidth = Mathf.RoundToInt(GUILayout.HorizontalSlider(aspectRatioWidth, 12, 21));
-        if (lastRatioWidth != aspectRatioWidth)
+        mAspectRatioWidth = Mathf.RoundToInt(GUILayout.HorizontalSlider(mAspectRatioWidth, 12, 21));
+        if (mLastRatioWidth != mAspectRatioWidth)
         {
-            lastRatioWidth = aspectRatioWidth;
-            SetAspectRatio(aspectRatioWidth, aspectRatioHeight);
+            mLastRatioWidth = mAspectRatioWidth;
+            SetAspectRatio(mAspectRatioWidth);
         }
     }
 
@@ -328,11 +306,11 @@ public class AspectRatioController : MonoBehaviour
     private bool ApplicationWantsToQuit()
     {
         //仅允许在应用程序初始化后退出。
-        if (!started)
+        if (!mStarted)
             return false;
 
         //延迟退出，clear up
-        if (!quitStarted)
+        if (!mQuitStarted)
         {
             StartCoroutine("DelayedQuit");
             return false;
@@ -349,7 +327,7 @@ public class AspectRatioController : MonoBehaviour
         // 重新设置旧的WindowProc回调,如果检测到WM_CLOSE,这将在新的回调本身中完成, 64位没问题，32位可能会造成闪退
         SetWindowLong(unityHWnd, GWLP_WNDPROC, oldWndProcPtr);
         yield return new WaitForEndOfFrame();
-        quitStarted = true;
+        mQuitStarted = true;
         Application.Quit();
     }
 #endif

@@ -21,6 +21,8 @@ using UnityEngine.Events;
 public class AspectRatioController : MonoBehaviour
 {
 #if UNITY_STANDALONE_WIN
+    public GameObject test;
+
     private float mLastRatioWidth = 16;
     private float mAspectRatioWidth = 16;
 

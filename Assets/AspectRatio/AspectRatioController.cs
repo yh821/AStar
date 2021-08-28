@@ -34,9 +34,14 @@ public class AspectRatioController : MonoBehaviour
     private int mMinHeightPixel = 600;
     private int mMaxWidthPixel = 1920;
     private int mMaxHeightPixel = 1080;
+    private int mDefaultWidth = 1334;
+    private int mDefaultHeight = 768;
 
-    // 当前锁定长宽比。
+    // 当前长宽比。
     private float mAspect;
+
+    private bool mIsFixed = false;
+    private bool mLastIsFixed = false;
 
     // 是否初始化了AspectRatioController
     // 一旦注册了WindowProc回调函数，就将其设置为true
@@ -207,54 +212,62 @@ public class AspectRatioController : MonoBehaviour
             int borderWidth = windowRect.Right - windowRect.Left - (clientRect.Right - clientRect.Left);
             int borderHeight = windowRect.Bottom - windowRect.Top - (clientRect.Bottom - clientRect.Top);
 
-            // 在应用宽高比之前删除边框(包括窗口标题栏)
-            rc.Right -= borderWidth;
-            rc.Bottom -= borderHeight;
-
-            // 限制窗口大小
-            int newWidth = Mathf.Clamp(rc.Right - rc.Left, mMinWidthPixel, mMaxWidthPixel);
-            int newHeight = Mathf.Clamp(rc.Bottom - rc.Top, mMinHeightPixel, mMaxHeightPixel);
-
-            // 根据纵横比和方向调整大小
-            switch (wParam.ToInt32())
+            if (mIsFixed)
             {
-                case WMSZ_LEFT:
-                    rc.Left = rc.Right - newWidth;
-                    rc.Bottom = rc.Top + Mathf.RoundToInt(newWidth / mAspect);
-                    break;
-                case WMSZ_RIGHT:
-                    rc.Right = rc.Left + newWidth;
-                    rc.Bottom = rc.Top + Mathf.RoundToInt(newWidth / mAspect);
-                    break;
-                case WMSZ_TOP:
-                    rc.Top = rc.Bottom - newHeight;
-                    rc.Right = rc.Left + Mathf.RoundToInt(newHeight * mAspect);
-                    break;
-                case WMSZ_BOTTOM:
-                    rc.Bottom = rc.Top + newHeight;
-                    rc.Right = rc.Left + Mathf.RoundToInt(newHeight * mAspect);
-                    break;
-                case WMSZ_RIGHT + WMSZ_BOTTOM:
-                    rc.Right = rc.Left + newWidth;
-                    rc.Bottom = rc.Top + Mathf.RoundToInt(newWidth / mAspect);
-                    break;
-                case WMSZ_RIGHT + WMSZ_TOP:
-                    rc.Right = rc.Left + newWidth;
-                    rc.Top = rc.Bottom - Mathf.RoundToInt(newWidth / mAspect);
-                    break;
-                case WMSZ_LEFT + WMSZ_BOTTOM:
-                    rc.Left = rc.Right - newWidth;
-                    rc.Bottom = rc.Top + Mathf.RoundToInt(newWidth / mAspect);
-                    break;
-                case WMSZ_LEFT + WMSZ_TOP:
-                    rc.Left = rc.Right - newWidth;
-                    rc.Top = rc.Bottom - Mathf.RoundToInt(newWidth / mAspect);
-                    break;
+                rc.Right = rc.Left + mDefaultWidth + borderWidth;
+                rc.Bottom = rc.Top + mDefaultHeight + borderHeight;
             }
+            else
+            {
+                // 在应用宽高比之前删除边框(包括窗口标题栏)
+                rc.Right -= borderWidth;
+                rc.Bottom -= borderHeight;
 
-            // 添加边界
-            rc.Right += borderWidth;
-            rc.Bottom += borderHeight;
+                // 限制窗口大小
+                int newWidth = Mathf.Clamp(rc.Right - rc.Left, mMinWidthPixel, mMaxWidthPixel);
+                int newHeight = Mathf.Clamp(rc.Bottom - rc.Top, mMinHeightPixel, mMaxHeightPixel);
+
+                // 根据纵横比和方向调整大小
+                switch (wParam.ToInt32())
+                {
+                    case WMSZ_LEFT:
+                        rc.Left = rc.Right - newWidth;
+                        rc.Bottom = rc.Top + Mathf.RoundToInt(newWidth / mAspect);
+                        break;
+                    case WMSZ_RIGHT:
+                        rc.Right = rc.Left + newWidth;
+                        rc.Bottom = rc.Top + Mathf.RoundToInt(newWidth / mAspect);
+                        break;
+                    case WMSZ_TOP:
+                        rc.Top = rc.Bottom - newHeight;
+                        rc.Right = rc.Left + Mathf.RoundToInt(newHeight * mAspect);
+                        break;
+                    case WMSZ_BOTTOM:
+                        rc.Bottom = rc.Top + newHeight;
+                        rc.Right = rc.Left + Mathf.RoundToInt(newHeight * mAspect);
+                        break;
+                    case WMSZ_RIGHT + WMSZ_BOTTOM:
+                        rc.Right = rc.Left + newWidth;
+                        rc.Bottom = rc.Top + Mathf.RoundToInt(newWidth / mAspect);
+                        break;
+                    case WMSZ_RIGHT + WMSZ_TOP:
+                        rc.Right = rc.Left + newWidth;
+                        rc.Top = rc.Bottom - Mathf.RoundToInt(newWidth / mAspect);
+                        break;
+                    case WMSZ_LEFT + WMSZ_BOTTOM:
+                        rc.Left = rc.Right - newWidth;
+                        rc.Bottom = rc.Top + Mathf.RoundToInt(newWidth / mAspect);
+                        break;
+                    case WMSZ_LEFT + WMSZ_TOP:
+                        rc.Left = rc.Right - newWidth;
+                        rc.Top = rc.Bottom - Mathf.RoundToInt(newWidth / mAspect);
+                        break;
+                }
+
+                // 添加边界
+                rc.Right += borderWidth;
+                rc.Bottom += borderHeight;
+            }
 
             // 回写更改的窗口参数
             Marshal.StructureToPtr(rc, lParam, true);
@@ -280,6 +293,13 @@ public class AspectRatioController : MonoBehaviour
         {
             mLastRatioWidth = mAspectRatioWidth;
             SetAspectRatio(mAspectRatioWidth);
+        }
+
+        mIsFixed = GUILayout.Toggle(mIsFixed, "是否固定分辨率");
+        if (mLastIsFixed != mIsFixed)
+        {
+            mLastIsFixed = mIsFixed;
+            Screen.SetResolution(mDefaultWidth, mDefaultHeight, false);
         }
     }
 

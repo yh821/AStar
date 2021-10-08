@@ -61,7 +61,7 @@ public partial class AStar
     }
 
     public void ExportMap () {
-		var file = string.Format ("MapData/map_{0}.txt", DateTime.Now.ToString ("MMddHHMMss"));
+		var file = string.Format ("MapData/map_{0:MMddHHMMss}.txt", DateTime.Now);
 		var fullpath = Path.Combine(dataPath, file);
         using(StreamWriter sw = new StreamWriter(fullpath,false,Encoding.UTF8))
         {

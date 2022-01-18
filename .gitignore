@@ -1,3 +1,4 @@
+.svn
 Library
 obj
 Temp
@@ -6,3 +7,4 @@ Logs
 .vs
 *.sln
 *.csproj
+.idea
